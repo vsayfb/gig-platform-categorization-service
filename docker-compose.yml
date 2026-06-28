@@ -1,0 +1,23 @@
+services:
+  localstack:
+    image: localstack/localstack:4.14.0
+    container_name: localstack
+
+    ports:
+      - "4566:4566"
+
+    environment:
+      DEBUG: "1"
+      AWS_DEFAULT_REGION: us-east-1
+
+    volumes:
+      - localstack-data:/var/lib/localstack
+
+      # LocalStack initialization script
+      - ./docker/localstack/init-sqs.sh:/etc/localstack/init/ready.d/init-sqs.sh
+
+      # Lambda deployment package
+      - ./function.zip:/etc/localstack/init/ready.d/function.zip
+
+volumes:
+  localstack-data:
