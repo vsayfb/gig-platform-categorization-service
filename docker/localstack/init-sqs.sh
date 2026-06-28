@@ -15,7 +15,7 @@ awslocal lambda create-function \
     --function-name categorization_service \
     --runtime provided.al2023 \
     --handler bootstrap \
-    --zip-file fileb:///etc/localstack/init/ready.d/function.zip \
+    --zip-file fileb:///etc/localstack/init/ready.d/lambda/function.zip \
     --role arn:aws:iam::000000000000:role/lambda-execution-role
 
 echo "Creating SQS → Lambda event source mapping..."
