@@ -9,14 +9,13 @@ import (
 	"github.com/vsayfb/gig-platform-categorization-service/internal/category"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
-	"github.com/vsayfb/gig-platform-categorization-service/internal/prompter"
-	"github.com/vsayfb/gig-platform-categorization-service/internal/provider"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/subscriber"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/embeddings"
 )
 
 type App struct {
 	categoryService       *category.Service
-	providerRepo          *provider.Repository
+	subscriberRepo        *subscriber.Repository
 	notificationPublisher *notification.SQSPublisher
 }
 
@@ -40,11 +39,6 @@ func getApp(ctx context.Context) (*App, error) {
 			return
 		}
 
-		if err := prompter.Init(cfg.PromptFile); err != nil {
-			initErr = err
-			return
-		}
-
 		embeddingClient := embeddings.NewHuggingFaceClient(cfg)
 
 		app = &App{
@@ -53,7 +47,7 @@ func getApp(ctx context.Context) (*App, error) {
 				embeddingClient,
 				cfg,
 			),
-			providerRepo: provider.NewRepository(db),
+			subscriberRepo: subscriber.NewRepository(db),
 			notificationPublisher: notification.NewSQSPublisher(
 				cfg.NotificationSQS,
 			),

@@ -22,7 +22,6 @@ type SQSPublisher struct {
 
 func NewSQSPublisher(queueURL string) *SQSPublisher {
 	cfg, _ := config.LoadDefaultConfig(context.Background())
-
 	return &SQSPublisher{
 		queueURL: queueURL,
 		client:   sqs.NewFromConfig(cfg),
@@ -36,17 +35,14 @@ func (p *SQSPublisher) Publish(ctx context.Context, fcmToken string, gigID uuid.
 	}
 
 	body, err := json.Marshal(msg)
-
 	if err != nil {
 		return fmt.Errorf("marshal notification message: %w", err)
 	}
 
 	bodyStr := string(body)
-
 	_, err = p.client.SendMessage(ctx, &sqs.SendMessageInput{
 		QueueUrl:    &p.queueURL,
 		MessageBody: &bodyStr,
 	})
-
 	return err
 }

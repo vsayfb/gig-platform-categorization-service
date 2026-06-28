@@ -1,4 +1,4 @@
-package provider
+package subscriber
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Provider struct {
+type Subscriber struct {
 	ID       uuid.UUID
 	FCMToken string
 }
@@ -20,39 +20,35 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) FindByGig(ctx context.Context, gigID, categoryID uuid.UUID) ([]Provider, error) {
+func (r *Repository) FindByCategoryAndLocation(ctx context.Context, categoryID uuid.UUID, lat, lng float64) ([]Subscriber, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT DISTINCT p.id, p.fcm_token
 		FROM providers p
 		LEFT JOIN provider_categories pc ON pc.provider_id = p.id
-		JOIN gig_locations gl ON gl.gig_id = $1
 		WHERE (
-			pc.category_id = $2
+			pc.category_id = $1
+			OR p.is_yevmiyeci = TRUE
 		)
 		AND p.fcm_token IS NOT NULL
 		AND ST_DWithin(
 			p.location::geography,
-			gl.location::geography,
+			ST_MakePoint($2, $3)::geography,
 			p.radius_km * 1000
 		)
-	`, gigID, categoryID)
-
+	`, categoryID, lng, lat)
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
-	var providers []Provider
-
+	var subscribers []Subscriber
 	for rows.Next() {
-		var p Provider
-
-		if err := rows.Scan(&p.ID, &p.FCMToken); err != nil {
+		var s Subscriber
+		if err := rows.Scan(&s.ID, &s.FCMToken); err != nil {
 			return nil, err
 		}
-		providers = append(providers, p)
+		subscribers = append(subscribers, s)
 	}
 
-	return providers, nil
+	return subscribers, nil
 }

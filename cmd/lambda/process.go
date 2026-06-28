@@ -9,8 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
+}
+
 type GigCreatedMessage struct {
-	GigID uuid.UUID `json:"gig_id"`
+	GigID       uuid.UUID `json:"gig_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Location    Location  `json:"location"`
 }
 
 func (a *App) process(ctx context.Context, record events.SQSMessage) error {
@@ -22,21 +30,24 @@ func (a *App) process(ctx context.Context, record events.SQSMessage) error {
 
 	log.Printf("processing gig %s", msg.GigID)
 
-	cat, err := a.categoryService.ResolveForGig(ctx, msg.GigID)
+	// 1. Categorize text — no gig awareness inside the service
+	cat, err := a.categoryService.Resolve(ctx, msg.Title, msg.Description)
 	if err != nil {
 		return err
 	}
 
-	providers, err := a.providerRepo.FindByGig(ctx, msg.GigID, cat.ID)
+	// 2. Find matching subscribers by category + location
+	subscribers, err := a.subscriberRepo.FindByCategoryAndLocation(ctx, cat.ID, msg.Location.Lat, msg.Location.Lng)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("found %d providers for gig %s", len(providers), msg.GigID)
+	log.Printf("found %d subscribers for gig %s", len(subscribers), msg.GigID)
 
-	for _, p := range providers {
-		if err := a.notificationPublisher.Publish(ctx, p.FCMToken, msg.GigID); err != nil {
-			log.Printf("failed to publish notification for provider %s: %v", p.ID, err)
+	// 3. Fan out to Notification Lambda
+	for _, s := range subscribers {
+		if err := a.notificationPublisher.Publish(ctx, s.FCMToken, msg.GigID); err != nil {
+			log.Printf("failed to publish notification for subscriber %s: %v", s.ID, err)
 		}
 	}
 
