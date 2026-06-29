@@ -46,7 +46,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	prompt := prompter.BuildProfessionPrompt(title, description)
 
 	payload := map[string]any{
-		"model": "groq/compound",
+		"model": s.cfg.AI_MODEL,
 		"messages": []map[string]string{
 			{
 				"role":    "system",
@@ -73,7 +73,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		"https://api.groq.com/openai/v1/chat/completions",
+		s.cfg.AI_API_ENDPOINT,
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -84,9 +84,11 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -115,6 +117,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	}
 
 	var extracted aiResponse
+
 	if err := json.Unmarshal([]byte(result.Choices[0].Message.Content), &extracted); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response: %w\nresponse=%s",
 			err,

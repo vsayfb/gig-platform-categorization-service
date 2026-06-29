@@ -13,22 +13,23 @@ type Config struct {
 	AI_API_ENDPOINT      string
 	AI_MODEL             string
 	HuggingFaceAPIKey    string
-	HUGGINGFACE_AI_MODEL string
+	HuggingFaceAIModel   string
 	HUGGINGFACE_ENDPOINT string
 	PromptFile           string
+	LocalOllamaEndpoint  string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		DatabaseURL:          required("DATABASE_URL"),
-		CategorizationSQS:    required("CATEGORIZATION_SQS_URL"),
-		NotificationSQS:      required("NOTIFICATION_SQS_URL"),
-		AI_API_KEY:           required("AI_API_KEY"),
-		AI_API_ENDPOINT:      required("AI_API_ENDPOINT"),
-		AI_MODEL:             required("AI_MODEL"),
-		HuggingFaceAPIKey:    required("HUGGINGFACE_API_KEY"),
-		HUGGINGFACE_AI_MODEL: required("HUGGINGFACE_AI_MODEL"),
-		HUGGINGFACE_ENDPOINT: required("HUGGINGFACE_ENDPOINT"),
+		DatabaseURL:         required("DATABASE_URL"),
+		CategorizationSQS:   required("CATEGORIZATION_SQS_URL"),
+		NotificationSQS:     required("NOTIFICATION_SQS_URL"),
+		AI_API_KEY:          required("AI_API_KEY"),
+		AI_API_ENDPOINT:     required("AI_API_ENDPOINT"),
+		AI_MODEL:            required("AI_MODEL"),
+		HuggingFaceAPIKey:   required("HUGGINGFACE_API_KEY"),
+		HuggingFaceAIModel:  required("HUGGINGFACE_AI_MODEL"),
+		LocalOllamaEndpoint: required("LOCAL_OLLAMA_ENDPOINT"),
 
 		// Optional
 		PromptFile: os.Getenv("PROMPT_FILE"),

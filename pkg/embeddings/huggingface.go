@@ -11,54 +11,70 @@ import (
 	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 )
 
-type HuggingFaceClient struct {
-	apiKey string
+type LocalClient struct {
 	client *http.Client
 	cfg    *config.Config
 }
 
-func NewHuggingFaceClient(cfg *config.Config) *HuggingFaceClient {
-	return &HuggingFaceClient{
-		apiKey: cfg.HuggingFaceAPIKey,
-		client: &http.Client{Timeout: 15 * time.Second},
+type OllamaEmbeddingRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+}
+
+type OllamaEmbeddingResponse struct {
+	Embedding []float32 `json:"embedding"`
+}
+
+func NewLocalClient(cfg *config.Config) *LocalClient {
+	return &LocalClient{
+		client: &http.Client{Timeout: 2 * time.Second},
 		cfg:    cfg,
 	}
 }
 
-func (c *HuggingFaceClient) Embed(ctx context.Context, text string) ([]float32, error) {
-	body, _ := json.Marshal(map[string]any{
-		"inputs": text,
-	})
+func (c *LocalClient) Embed(ctx context.Context, text string) ([]float32, error) {
+	// Ollama requires the model name inside the JSON payload
+	reqBody := OllamaEmbeddingRequest{
+		Model:  c.cfg.HuggingFaceAIModel,
+		Prompt: text,
+	}
 
-	url := c.cfg.HUGGINGFACE_ENDPOINT + "/" + c.cfg.HUGGINGFACE_AI_MODEL
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	url := c.cfg.LocalOllamaEndpoint + "/api/embeddings"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 
 	if err != nil {
 		return nil, err
-
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.client.Do(req)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("local ollama request failed: %w", err)
 	}
 
 	defer resp.Body.Close()
 
-	var raw [][]float32
-
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("decode embedding response: %w", err)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ollama returned bad status: %s", resp.Status)
 	}
 
-	if len(raw) == 0 {
-		return nil, fmt.Errorf("empty embedding response")
+	var result OllamaEmbeddingResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode local embedding response: %w", err)
 	}
 
-	return raw[0], nil
+	if len(result.Embedding) == 0 {
+		return nil, fmt.Errorf("empty local embedding array returned")
+	}
+
+	return result.Embedding, nil
 }

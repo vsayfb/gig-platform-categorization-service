@@ -46,7 +46,7 @@ func getApp(ctx context.Context) (*App, error) {
 			return
 		}
 
-		embeddingClient := embeddings.NewHuggingFaceClient(cfg)
+		embeddingClient := embeddings.NewLocalClient(cfg)
 
 		app = &App{
 			categoryService: category.NewService(
