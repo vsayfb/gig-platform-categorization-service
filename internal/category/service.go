@@ -22,8 +22,8 @@ type Service struct {
 	cfg             *config.Config
 }
 
-func NewService(repo *Repository, embeddingClient EmbeddingClient, cfg *config.Config) *Service {
-	return &Service{repo: repo, embeddingClient: embeddingClient, cfg: cfg}
+func NewService(repo *Repository, embeddingClient EmbeddingClient, extractor extractor.Extractor, cfg *config.Config) *Service {
+	return &Service{repo: repo, embeddingClient: embeddingClient, extractor: extractor, cfg: cfg}
 }
 
 func (s *Service) Resolve(ctx context.Context, title, description string) (*Category, error) {

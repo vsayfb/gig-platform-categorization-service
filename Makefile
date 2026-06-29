@@ -14,10 +14,10 @@ logs:
 	$(COMPOSE) logs -f
 
 build:
-	go build -o bin/$(BINARY) ./cmd/server
+	go build -o bin/$(BINARY) ./cmd/worker
 
 run:
-	go run ./cmd/server
+	go run ./cmd/worker
 
 clean:
 	rm -rf bin
@@ -27,4 +27,3 @@ docker-build:
 
 docker-run:
 	docker run --rm --env-file .env.example $(IMAGE)
-

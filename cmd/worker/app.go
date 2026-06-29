@@ -10,6 +10,7 @@ import (
 	pgxvec "github.com/pgvector/pgvector-go/pgx"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/category"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/extractor"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/subscriber"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/embeddings"
@@ -50,6 +51,7 @@ func getApp(ctx context.Context) (*App, error) {
 		}
 
 		embeddingClient := embeddings.NewLocalClient(cfg)
+		groqClient := extractor.NewGroqExtractor(embeddingClient, cfg)
 
 		app = &App{
 			cfg: cfg,
@@ -57,6 +59,7 @@ func getApp(ctx context.Context) (*App, error) {
 			categoryService: category.NewService(
 				category.NewRepository(db),
 				embeddingClient,
+				groqClient,
 				cfg,
 			),
 

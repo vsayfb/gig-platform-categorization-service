@@ -34,15 +34,11 @@ type GroqExtractor struct {
 	cfg *config.Config
 }
 
-func New(embeddingClient EmbeddingClient, cfg *config.Config) *GroqExtractor {
+func NewGroqExtractor(embeddingClient EmbeddingClient, cfg *config.Config) *GroqExtractor {
 	return &GroqExtractor{cfg: cfg}
 }
 
-type aiResponse struct {
-	Name string `json:"name"`
-}
-
-func (s *GroqExtractor) Extract(ctx context.Context, title, description string) (*aiResponse, error) {
+func (s *GroqExtractor) Extract(ctx context.Context, title, description string) (*ExtractedCategory, error) {
 	prompt := prompter.BuildProfessionPrompt(title, description)
 
 	payload := map[string]any{
@@ -116,7 +112,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 		return nil, errors.New("no choices returned from Groq")
 	}
 
-	var extracted aiResponse
+	var extracted ExtractedCategory
 
 	if err := json.Unmarshal([]byte(result.Choices[0].Message.Content), &extracted); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response: %w\nresponse=%s",

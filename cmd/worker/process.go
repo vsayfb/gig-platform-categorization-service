@@ -34,6 +34,8 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 	// categorize text
 	cat, err := a.categoryService.Resolve(ctx, msg.Title, msg.Description)
 	if err != nil {
+		slog.Error("categorize text error", "err", err)
+
 		return err
 	}
 
