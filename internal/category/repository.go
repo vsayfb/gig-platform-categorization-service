@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 type Category struct {
@@ -26,21 +27,23 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) FindSimilar(ctx context.Context, embedding []float32, threshold float64) (*Category, error) {
-	var storedEmbedding []float32
+	vec := pgvector.NewVector(embedding)
+
 	var cat Category
+	var storedVec pgvector.Vector
 
 	row := r.db.QueryRow(ctx, `
 		SELECT id, name, slug, created_at, embedding
 		FROM categories
 		ORDER BY embedding <=> $1
 		LIMIT 1
-	`, pgvectorLiteral(embedding))
+	`, vec)
 
-	if err := row.Scan(&cat.ID, &cat.Name, &cat.Slug, &cat.CreatedAt, &storedEmbedding); err != nil {
+	if err := row.Scan(&cat.ID, &cat.Name, &cat.Slug, &cat.CreatedAt, &storedVec); err != nil {
 		return nil, nil // no categories yet
 	}
 
-	if cosineSimilarity(embedding, storedEmbedding) < threshold {
+	if cosineSimilarity(embedding, storedVec.Slice()) < threshold {
 		return nil, nil
 	}
 
@@ -55,10 +58,12 @@ func (r *Repository) Create(ctx context.Context, name, slug string, embedding []
 		CreatedAt: time.Now(),
 	}
 
+	vec := pgvector.NewVector(embedding)
+
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO categories (id, name, slug, embedding, created_at)
 		VALUES ($1, $2, $3, $4, $5)
-	`, cat.ID, cat.Name, cat.Slug, pgvectorLiteral(embedding), cat.CreatedAt)
+	`, cat.ID, cat.Name, cat.Slug, vec, cat.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

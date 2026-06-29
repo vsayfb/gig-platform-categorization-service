@@ -4,8 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	pgxvec "github.com/pgvector/pgvector-go/pgx"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/category"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
@@ -34,6 +36,11 @@ func getApp(ctx context.Context) (*App, error) {
 		}
 
 		db, err := pgxpool.New(ctx, cfg.DatabaseURL)
+
+		db.Config().AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+			return pgxvec.RegisterTypes(ctx, conn)
+		}
+
 		if err != nil {
 			initErr = err
 			return
