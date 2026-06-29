@@ -32,27 +32,26 @@ func (r *Repository) FindByCategoryAndLocation(ctx context.Context, categoryID u
 		AND ST_DWithin(
 			ul.location::geography,
 			ST_MakePoint($2, $3)::geography,
-			$4
+			150000
 		)
 	`, categoryID, lng, lat)
 
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var subscribers []Subscriber
 
 	for rows.Next() {
 		var s Subscriber
-
+		
 		if err := rows.Scan(&s.ID, &s.FCMToken); err != nil {
 			return nil, err
 		}
-
 		subscribers = append(subscribers, s)
 	}
+
 
 	return subscribers, nil
 }

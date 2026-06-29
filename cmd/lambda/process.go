@@ -38,6 +38,7 @@ func (a *App) process(ctx context.Context, record events.SQSMessage) error {
 
 	// Find matching subscribers by category + location
 	subscribers, err := a.subscriberRepo.FindByCategoryAndLocation(ctx, cat.ID, msg.Location.Lat, msg.Location.Lng)
+
 	if err != nil {
 		return err
 	}
