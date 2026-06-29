@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -21,8 +22,12 @@ func New(p Processor) (*Worker, error) {
 		return nil, err
 	}
 
+	client := sqs.NewFromConfig(cfg, func(o *sqs.Options) {
+		o.BaseEndpoint = aws.String(os.Getenv("AWS_SQS_ENDPOINT"))
+	})
+
 	return &Worker{
-		client:    sqs.NewFromConfig(cfg),
+		client:    client,
 		processor: p,
 	}, nil
 }

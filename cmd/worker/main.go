@@ -2,25 +2,46 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/vsayfb/gig-platform-categorization-service/internal/worker"
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+
+	defer stop()
 
 	app, err := getApp(ctx)
+
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to initialize app", "err", err)
+		os.Exit(1)
 	}
 
 	w, err := worker.New(app)
+
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to initialize worker", "err", err)
+		os.Exit(1)
 	}
 
-	if err := w.Run(ctx); err != nil {
-		log.Fatal(err)
+	slog.Info(
+		"worker is running",
+		"queue", app.QueueURL(),
+	)
+
+	if err := w.Run(ctx); err != nil && err != context.Canceled {
+		slog.Error("worker stopped", "err", err)
+		os.Exit(1)
 	}
+
+	slog.Info("worker shut down gracefully")
 }

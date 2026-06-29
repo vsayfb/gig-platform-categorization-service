@@ -1,6 +1,8 @@
 package worker
 
-import "context"
+import (
+	"context"
+)
 
 type Processor interface {
 	Process(context.Context, Message) error
