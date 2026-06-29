@@ -23,11 +23,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 func (r *Repository) FindByCategoryAndLocation(ctx context.Context, categoryID uuid.UUID, lat, lng float64) ([]Subscriber, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT DISTINCT p.id, p.fcm_token
-		FROM providers p
-		LEFT JOIN provider_categories pc ON pc.provider_id = p.id
+		FROM users p
+		LEFT JOIN user_categories pc ON pc.user_id = p.id
 		WHERE (
 			pc.category_id = $1
-			OR p.is_yevmiyeci = TRUE
 		)
 		AND p.fcm_token IS NOT NULL
 		AND ST_DWithin(
@@ -36,17 +35,21 @@ func (r *Repository) FindByCategoryAndLocation(ctx context.Context, categoryID u
 			p.radius_km * 1000
 		)
 	`, categoryID, lng, lat)
+
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	var subscribers []Subscriber
+
 	for rows.Next() {
 		var s Subscriber
+
 		if err := rows.Scan(&s.ID, &s.FCMToken); err != nil {
 			return nil, err
 		}
+
 		subscribers = append(subscribers, s)
 	}
 

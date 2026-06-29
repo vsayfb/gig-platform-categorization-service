@@ -28,22 +28,23 @@ func NewService(repo *Repository, embeddingClient EmbeddingClient, cfg *config.C
 	return &Service{repo: repo, embeddingClient: embeddingClient, cfg: cfg}
 }
 
-// Resolve takes raw text and returns a matched or newly created category.
 func (s *Service) Resolve(ctx context.Context, title, description string) (*Category, error) {
-	// 1. Extract profession via AI
+	// Extract profession via AI
 	extracted, err := s.extractProfession(ctx, title, description)
 	if err != nil {
 		return nil, fmt.Errorf("extract profession: %w", err)
 	}
 
-	// 2. Generate embedding
+	// Generate embedding
 	embedding, err := s.embeddingClient.Embed(ctx, extracted.Name)
+
 	if err != nil {
 		return nil, fmt.Errorf("generate embedding: %w", err)
 	}
 
-	// 3. Find similar existing category
+	// Find similar existing category
 	existing, err := s.repo.FindSimilar(ctx, embedding, similarityThreshold)
+
 	if err != nil {
 		return nil, fmt.Errorf("find similar category: %w", err)
 	}
@@ -52,8 +53,9 @@ func (s *Service) Resolve(ctx context.Context, title, description string) (*Cate
 		return existing, nil
 	}
 
-	// 4. Create new category
+	// Create new category
 	cat, err := s.repo.Create(ctx, extracted.Name, extracted.Slug, embedding)
+
 	if err != nil {
 		return nil, fmt.Errorf("create category: %w", err)
 	}
