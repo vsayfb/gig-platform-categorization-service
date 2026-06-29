@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log"
+
+	"github.com/vsayfb/gig-platform-categorization-service/internal/worker"
 )
 
 func main() {
@@ -13,9 +15,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	worker := NewWorker(app)
+	w, err := worker.New(app)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	if err := worker.Run(ctx); err != nil {
+	if err := w.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
