@@ -6,17 +6,15 @@ import (
 )
 
 type Config struct {
-	DatabaseURL          string
-	CategorizationSQS    string
-	NotificationSQS      string
-	AI_API_KEY           string
-	AI_API_ENDPOINT      string
-	AI_MODEL             string
-	HuggingFaceAPIKey    string
-	HuggingFaceAIModel   string
-	HUGGINGFACE_ENDPOINT string
-	PromptFile           string
-	LocalOllamaEndpoint  string
+	DatabaseURL         string
+	CategorizationSQS   string
+	NotificationSQS     string
+	AI_API_KEY          string
+	AI_API_ENDPOINT     string
+	AI_MODEL            string
+	HuggingFaceAIModel  string
+	PromptFile          string
+	LocalOllamaEndpoint string
 }
 
 func Load() (*Config, error) {
@@ -27,7 +25,6 @@ func Load() (*Config, error) {
 		AI_API_KEY:          required("AI_API_KEY"),
 		AI_API_ENDPOINT:     required("AI_API_ENDPOINT"),
 		AI_MODEL:            required("AI_MODEL"),
-		HuggingFaceAPIKey:   required("HUGGINGFACE_API_KEY"),
 		HuggingFaceAIModel:  required("HUGGINGFACE_AI_MODEL"),
 		LocalOllamaEndpoint: required("LOCAL_OLLAMA_ENDPOINT"),
 

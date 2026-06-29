@@ -1,13 +1,23 @@
 FROM golang:1.26.4-alpine AS builder
 
 WORKDIR /app
+
 COPY go.mod go.sum ./
-RUN go mod download
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
 COPY . .
-RUN go build -o bin/cat-service ./cmd/server
+
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -o bin/cat-worker ./cmd/worker
+
 
 FROM alpine:3.21
+
 WORKDIR /app
-COPY --from=builder /app/bin/cat-service .
-EXPOSE 8081
-CMD ["./cat-service"]
+
+COPY --from=builder /app/bin/cat-worker .
+
+CMD ["./cat-worker"]

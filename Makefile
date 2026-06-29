@@ -1,15 +1,30 @@
-.PHONY: build clean
+BINARY=cat-service
+IMAGE=cat-service
+COMPOSE=docker compose
+
+.PHONY: build run clean docker-build docker-run up down logs
+
+up:
+	$(COMPOSE) up --build -d
+
+down:
+	$(COMPOSE) down
+
+logs:
+	$(COMPOSE) logs -f
 
 build:
-	@echo "Building Lambda..."
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-	go build -tags lambda.norpc -o bootstrap ./cmd/lambda
+	go build -o bin/$(BINARY) ./cmd/server
 
-	zip -j function.zip bootstrap
-
-	rm bootstrap
+run:
+	go run ./cmd/server
 
 clean:
-	rm -f function.zip
+	rm -rf bin
 
+docker-build:
+	docker build -t $(IMAGE) -f Dockerfile .
+
+docker-run:
+	docker run --rm --env-file .env.example $(IMAGE)
 
