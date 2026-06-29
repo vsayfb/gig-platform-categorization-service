@@ -16,6 +16,8 @@ import (
 )
 
 type App struct {
+	cfg *config.Config
+
 	categoryService       *category.Service
 	subscriberRepo        *subscriber.Repository
 	notificationPublisher *notification.SQSPublisher
@@ -30,6 +32,7 @@ var (
 func getApp(ctx context.Context) (*App, error) {
 	once.Do(func() {
 		cfg, err := config.Load()
+
 		if err != nil {
 			initErr = err
 			return
@@ -49,12 +52,16 @@ func getApp(ctx context.Context) (*App, error) {
 		embeddingClient := embeddings.NewLocalClient(cfg)
 
 		app = &App{
+			cfg: cfg,
+
 			categoryService: category.NewService(
 				category.NewRepository(db),
 				embeddingClient,
 				cfg,
 			),
+
 			subscriberRepo: subscriber.NewRepository(db),
+
 			notificationPublisher: notification.NewSQSPublisher(
 				cfg.NotificationSQS,
 			),

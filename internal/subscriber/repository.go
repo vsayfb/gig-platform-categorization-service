@@ -45,13 +45,12 @@ func (r *Repository) FindByCategoryAndLocation(ctx context.Context, categoryID u
 
 	for rows.Next() {
 		var s Subscriber
-		
+
 		if err := rows.Scan(&s.ID, &s.FCMToken); err != nil {
 			return nil, err
 		}
 		subscribers = append(subscribers, s)
 	}
-
 
 	return subscribers, nil
 }

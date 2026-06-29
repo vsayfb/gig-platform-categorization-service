@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
 )
 
@@ -21,7 +20,7 @@ type GigCreatedMessage struct {
 	Location    Location  `json:"location"`
 }
 
-func (a *App) process(ctx context.Context, record events.SQSMessage) error {
+func (a *App) process(ctx context.Context, record Message) error {
 	var msg GigCreatedMessage
 
 	if err := json.Unmarshal([]byte(record.Body), &msg); err != nil {
