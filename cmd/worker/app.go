@@ -15,6 +15,8 @@ import (
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/subscriber"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/embeddings"
+	lg "github.com/vsayfb/gig-platform-categorization-service/pkg/logger"
+	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
 )
 
 type App struct {
@@ -33,12 +35,17 @@ var (
 
 func getApp(ctx context.Context) (*App, error) {
 	once.Do(func() {
+
 		cfg, err := config.Load()
 
 		if err != nil {
 			initErr = fmt.Errorf("load config: %w", err)
 			return
 		}
+
+		lg.Init(cfg.Env)
+
+		metrics.Register()
 
 		poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 

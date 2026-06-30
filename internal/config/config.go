@@ -15,6 +15,7 @@ type Config struct {
 	HuggingFaceAIModel  string
 	PromptFile          string
 	LocalOllamaEndpoint string
+	Env                 string
 }
 
 func Load() (*Config, error) {
@@ -27,6 +28,7 @@ func Load() (*Config, error) {
 		AI_MODEL:            required("AI_MODEL"),
 		HuggingFaceAIModel:  required("HUGGINGFACE_AI_MODEL"),
 		LocalOllamaEndpoint: required("LOCAL_OLLAMA_ENDPOINT"),
+		Env:                 required("ENV"),
 
 		// Optional
 		PromptFile: os.Getenv("PROMPT_FILE"),

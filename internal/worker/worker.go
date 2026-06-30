@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
 )
 
 type Worker struct {
@@ -42,31 +44,44 @@ func (w *Worker) Run(ctx context.Context) error {
 		})
 
 		if err != nil {
-			slog.Error("receive fialed", "err", err)
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			slog.Error("receive failed", "err", err)
 			time.Sleep(time.Second)
+
 			continue
 		}
 
 		for _, m := range resp.Messages {
-			msg := Message{
-				ID:   aws.ToString(m.MessageId),
-				Body: aws.ToString(m.Body),
-			}
-
-			if err := w.processor.Process(ctx, msg); err != nil {
-				slog.Warn("processing failed", "err", err)
-
-				continue
-			}
-
-			_, err = w.client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-				QueueUrl:      aws.String(w.processor.QueueURL()),
-				ReceiptHandle: m.ReceiptHandle,
-			})
-
-			if err != nil {
-				slog.Error("delete failed", "err", err)
+			if err := w.processMessage(ctx, m); err != nil {
+				slog.Error("processing failed", "err", err)
 			}
 		}
 	}
+}
+
+func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error) {
+	start := time.Now()
+
+	defer func() {
+		metrics.ObserveWorkerProcessing(start, err)
+	}()
+
+	msg := Message{
+		ID:   aws.ToString(m.MessageId),
+		Body: aws.ToString(m.Body),
+	}
+
+	if err = w.processor.Process(ctx, msg); err != nil {
+		return err
+	}
+
+	_, err = w.client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(w.processor.QueueURL()),
+		ReceiptHandle: m.ReceiptHandle,
+	})
+
+	return err
 }
