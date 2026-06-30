@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -35,23 +36,42 @@ func getApp(ctx context.Context) (*App, error) {
 		cfg, err := config.Load()
 
 		if err != nil {
-			initErr = err
+			initErr = fmt.Errorf("load config: %w", err)
 			return
 		}
 
-		db, err := pgxpool.New(ctx, cfg.DatabaseURL)
+		poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 
-		db.Config().AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		if err != nil {
+			initErr = fmt.Errorf("parse database url: %w", err)
+			return
+		}
+
+		poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 			return pgxvec.RegisterTypes(ctx, conn)
 		}
 
+		db, err := pgxpool.NewWithConfig(ctx, poolCfg)
+
 		if err != nil {
-			initErr = err
+			initErr = fmt.Errorf("create db pool: %w", err)
+			return
+		}
+
+		if err := db.Ping(ctx); err != nil {
+			initErr = fmt.Errorf("ping db: %w", err)
 			return
 		}
 
 		embeddingClient := embeddings.NewLocalClient(cfg)
 		groqClient := extractor.NewGroqExtractor(embeddingClient, cfg)
+
+		publisher, err := notification.NewSQSPublisher(ctx, cfg.NotificationSQS)
+
+		if err != nil {
+			initErr = fmt.Errorf("create sqs publisher: %w", err)
+			return
+		}
 
 		app = &App{
 			cfg: cfg,
@@ -65,9 +85,7 @@ func getApp(ctx context.Context) (*App, error) {
 
 			subscriberRepo: subscriber.NewRepository(db),
 
-			notificationPublisher: notification.NewSQSPublisher(
-				cfg.NotificationSQS,
-			),
+			notificationPublisher: publisher,
 		}
 	})
 

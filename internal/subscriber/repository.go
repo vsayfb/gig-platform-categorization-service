@@ -7,6 +7,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+
+
 type Subscriber struct {
 	ID       uuid.UUID
 	FCMToken string
