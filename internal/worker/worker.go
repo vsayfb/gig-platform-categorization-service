@@ -64,7 +64,7 @@ func (w *Worker) Run(ctx context.Context) error {
 
 			mCtx, span := otel.Tracer("worker").Start(mCtx, "categorize-message")
 
-			if err := w.processMessage(ctx, m); err != nil {
+			if err := w.processMessage(mCtx, m); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				slog.ErrorContext(mCtx, "processing failed", "err", err)

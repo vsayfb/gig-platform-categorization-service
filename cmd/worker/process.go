@@ -65,6 +65,7 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 
 	// fanout to notification lambda, bounded concurrency, best-effort
 	g, gCtx := errgroup.WithContext(ctx)
+
 	g.SetLimit(maxFanoutConcurrency)
 
 	var failed atomic.Int64
