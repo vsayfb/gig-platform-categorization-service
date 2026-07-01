@@ -11,6 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
+	"github.com/vsayfb/gig-platform-categorization-service/pkg/tracing"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type Worker struct {
@@ -41,6 +44,9 @@ func (w *Worker) Run(ctx context.Context) error {
 			MaxNumberOfMessages: 10,
 			WaitTimeSeconds:     20,
 			VisibilityTimeout:   60,
+			MessageAttributeNames: []string{
+				"traceparent", "tracestate",
+			},
 		})
 
 		if err != nil {
@@ -49,15 +55,24 @@ func (w *Worker) Run(ctx context.Context) error {
 			}
 
 			slog.Error("receive failed", "err", err)
-			time.Sleep(time.Second)
 
 			continue
 		}
 
 		for _, m := range resp.Messages {
+			mCtx := tracing.ExtractTraceContext(ctx, m.MessageAttributes)
+
+			mCtx, span := otel.Tracer("worker").Start(mCtx, "categorize-message")
+
 			if err := w.processMessage(ctx, m); err != nil {
-				slog.Error("processing failed", "err", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				slog.ErrorContext(mCtx, "processing failed", "err", err)
+			} else {
+				span.SetStatus(codes.Ok, "processing succeed")
 			}
+
+			span.End()
 		}
 	}
 }
