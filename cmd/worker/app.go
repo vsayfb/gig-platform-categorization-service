@@ -4,24 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"os/signal"
+	"net/http"
 	"sync"
-	"syscall"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	pgxvec "github.com/pgvector/pgvector-go/pgx"
+	lg "github.com/vsayfb/gig-platform-categorization-service/pkg/logger"
+
 	"github.com/vsayfb/gig-platform-categorization-service/internal/category"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/extractor"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/subscriber"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/embeddings"
-	lg "github.com/vsayfb/gig-platform-categorization-service/pkg/logger"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
+	"github.com/vsayfb/gig-platform-categorization-service/pkg/tracing"
 )
 
 type App struct {
@@ -30,6 +29,10 @@ type App struct {
 	categoryService       *category.Service
 	subscriberRepo        *subscriber.Repository
 	notificationPublisher *notification.SQSPublisher
+
+	db             *pgxpool.Pool
+	metricsServer  *http.Server
+	tracerShutdown func(context.Context) error
 }
 
 var (
@@ -42,7 +45,6 @@ func getApp(ctx context.Context) (*App, error) {
 	once.Do(func() {
 
 		cfg, err := config.Load()
-
 		if err != nil {
 			initErr = fmt.Errorf("load config: %w", err)
 			return
@@ -52,38 +54,79 @@ func getApp(ctx context.Context) (*App, error) {
 
 		metrics.Register()
 
-		metrics_svc := metrics.StartServer(cfg.MetricsServerPort)
+		metricsServer := metrics.StartServer(
+			cfg.MetricsServerPort,
+		)
+
+		shutdownTracer, err := tracing.InitTracer(
+			ctx,
+			"core-service",
+			cfg.OTelCollectorAddr,
+		)
+
+		if err != nil {
+			initErr = fmt.Errorf(
+				"init tracer: %w",
+				err,
+			)
+			return
+		}
 
 		poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 
 		if err != nil {
-			initErr = fmt.Errorf("parse database url: %w", err)
+			initErr = fmt.Errorf(
+				"parse database url: %w",
+				err,
+			)
 			return
 		}
 
-		poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		poolCfg.AfterConnect = func(
+			ctx context.Context,
+			conn *pgx.Conn,
+		) error {
 			return pgxvec.RegisterTypes(ctx, conn)
 		}
 
-		db, err := pgxpool.NewWithConfig(ctx, poolCfg)
+		db, err := pgxpool.NewWithConfig(
+			ctx,
+			poolCfg,
+		)
 
 		if err != nil {
-			initErr = fmt.Errorf("create db pool: %w", err)
+			initErr = fmt.Errorf(
+				"create db pool: %w",
+				err,
+			)
 			return
 		}
 
 		if err := db.Ping(ctx); err != nil {
-			initErr = fmt.Errorf("ping db: %w", err)
+			initErr = fmt.Errorf(
+				"ping db: %w",
+				err,
+			)
 			return
 		}
 
 		embeddingClient := embeddings.NewLocalClient(cfg)
-		groqClient := extractor.NewGroqExtractor(embeddingClient, cfg)
 
-		publisher, err := notification.NewSQSPublisher(ctx, cfg.NotificationSQS)
+		groqClient := extractor.NewGroqExtractor(
+			embeddingClient,
+			cfg,
+		)
+
+		publisher, err := notification.NewSQSPublisher(
+			ctx,
+			cfg.NotificationSQS,
+		)
 
 		if err != nil {
-			initErr = fmt.Errorf("create sqs publisher: %w", err)
+			initErr = fmt.Errorf(
+				"create sqs publisher: %w",
+				err,
+			)
 			return
 		}
 
@@ -100,24 +143,57 @@ func getApp(ctx context.Context) (*App, error) {
 			subscriberRepo: subscriber.NewRepository(db),
 
 			notificationPublisher: publisher,
+
+			db: db,
+
+			metricsServer: metricsServer,
+
+			tracerShutdown: shutdownTracer,
 		}
-
-		quit := make(chan os.Signal, 1)
-
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-		<-quit
-
-		slog.Info("shutting down")
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-
-		defer cancel()
-
-		_ = metrics_svc.Shutdown(ctx)
-
-		slog.Info("shutdown complete")
 	})
 
 	return app, initErr
+}
+
+func (a *App) Close(ctx context.Context) error {
+
+	slog.Info("closing application")
+
+	if a.metricsServer != nil {
+		if err := a.metricsServer.Shutdown(ctx); err != nil {
+			slog.Error(
+				"shutdown metrics server failed",
+				"err",
+				err,
+			)
+		}
+	}
+
+	if a.tracerShutdown != nil {
+		if err := a.tracerShutdown(ctx); err != nil {
+			slog.Error(
+				"shutdown tracer failed",
+				"err",
+				err,
+			)
+		}
+	}
+
+	if a.notificationPublisher != nil {
+		if err := a.notificationPublisher.Close(); err != nil {
+			slog.Error(
+				"close sqs publisher failed",
+				"err",
+				err,
+			)
+		}
+	}
+
+	if a.db != nil {
+		a.db.Close()
+	}
+
+	slog.Info("application closed")
+
+	return nil
 }

@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/vsayfb/gig-platform-categorization-service/internal/worker"
 )
 
 func main() {
+
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -22,25 +24,58 @@ func main() {
 	app, err := getApp(ctx)
 
 	if err != nil {
-		slog.Error("failed to initialize app", "err", err)
+		slog.Error(
+			"failed to initialize app",
+			"err",
+			err,
+		)
+
 		os.Exit(1)
 	}
 
 	w, err := worker.New(app)
 
 	if err != nil {
-		slog.Error("failed to initialize worker", "err", err)
+		slog.Error(
+			"failed to initialize worker",
+			"err",
+			err,
+		)
+
 		os.Exit(1)
 	}
 
 	slog.Info(
 		"worker is running",
-		"queue", app.QueueURL(),
+		"queue",
+		app.QueueURL(),
 	)
 
-	if err := w.Run(ctx); err != nil && err != context.Canceled {
-		slog.Error("worker stopped", "err", err)
+	if err := w.Run(ctx); err != nil &&
+		err != context.Canceled {
+
+		slog.Error(
+			"worker stopped",
+			"err",
+			err,
+		)
+
 		os.Exit(1)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		10*time.Second,
+	)
+
+	defer cancel()
+
+	if err := app.Close(shutdownCtx); err != nil {
+		slog.Error(
+			"application shutdown failed",
+			"err",
+			err,
+		)
 	}
 
 	slog.Info("worker shut down gracefully")

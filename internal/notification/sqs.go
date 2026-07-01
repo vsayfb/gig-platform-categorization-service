@@ -43,3 +43,7 @@ func (p *SQSPublisher) Publish(ctx context.Context, msg any) error {
 
 	return nil
 }
+
+func (p *SQSPublisher) Close() error {
+	return p.Close()
+}

@@ -17,6 +17,8 @@ type Config struct {
 	LocalOllamaEndpoint string
 	Env                 string
 	MetricsServerPort   string
+	ServiceName         string
+	OTelCollectorAddr   string
 }
 
 func Load() (*Config, error) {
@@ -31,6 +33,8 @@ func Load() (*Config, error) {
 		LocalOllamaEndpoint: required("LOCAL_OLLAMA_ENDPOINT"),
 		Env:                 required("ENV"),
 		MetricsServerPort:   required("METRICS_SERVER_PORT"),
+		OTelCollectorAddr:   required("OTEL_COLLECTOR_ADDR"),
+		ServiceName:         required("SERVICE_NAME"),
 
 		// Optional
 		PromptFile: os.Getenv("PROMPT_FILE"),
