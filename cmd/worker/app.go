@@ -60,7 +60,7 @@ func getApp(ctx context.Context) (*App, error) {
 
 		shutdownTracer, err := tracing.InitTracer(
 			ctx,
-			"core-service",
+			cfg.ServiceName,
 			cfg.OTelCollectorAddr,
 		)
 
