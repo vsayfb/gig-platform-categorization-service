@@ -9,7 +9,7 @@ import (
 var (
 	HttpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "core_http_requests_total",
+			Name: "categorization_http_requests_total",
 			Help: "Total HTTP requests handled, by route, method and status.",
 		},
 		[]string{"route", "method", "status"},
@@ -17,7 +17,7 @@ var (
 
 	HttpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "core_http_request_duration_seconds",
+			Name:    "categorization_http_request_duration_seconds",
 			Help:    "HTTP request latency in seconds.",
 			Buckets: prometheus.DefBuckets,
 		},
@@ -26,7 +26,7 @@ var (
 
 	WorkerMessagesTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "worker_messages_processed_total",
+			Name: "categorization_worker_messages_processed_total",
 			Help: "Total number of processed worker messages.",
 		},
 		[]string{"outcome"},
@@ -34,7 +34,7 @@ var (
 
 	WorkerProcessingDuration = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Name:    "worker_message_processing_duration_seconds",
+			Name:    "categorization_worker_message_processing_duration_seconds",
 			Help:    "Time spent processing worker messages.",
 			Buckets: prometheus.DefBuckets,
 		},

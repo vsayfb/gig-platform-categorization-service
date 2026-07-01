@@ -3,7 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,6 +51,8 @@ func getApp(ctx context.Context) (*App, error) {
 		lg.Init(cfg.Env)
 
 		metrics.Register()
+
+		metrics_svc := metrics.StartServer(cfg.MetricsServerPort)
 
 		poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 
@@ -94,6 +101,22 @@ func getApp(ctx context.Context) (*App, error) {
 
 			notificationPublisher: publisher,
 		}
+
+		quit := make(chan os.Signal, 1)
+
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+		<-quit
+
+		slog.Info("shutting down")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		defer cancel()
+
+		_ = metrics_svc.Shutdown(ctx)
+
+		slog.Info("shutdown complete")
 	})
 
 	return app, initErr
