@@ -1,62 +1,79 @@
 package metrics
 
 import (
+	"context"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 var (
-	HttpRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "categorization_http_requests_total",
-			Help: "Total HTTP requests handled, by route, method and status.",
-		},
-		[]string{"route", "method", "status"},
-	)
+	meter = otel.Meter("categorization")
 
-	HttpRequestDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "categorization_http_request_duration_seconds",
-			Help:    "HTTP request latency in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"route", "method", "status"},
-	)
-
-	WorkerMessagesTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "categorization_worker_messages_processed_total",
-			Help: "Total number of processed worker messages.",
-		},
-		[]string{"outcome"},
-	)
-
-	WorkerProcessingDuration = prometheus.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "categorization_worker_message_processing_duration_seconds",
-			Help:    "Time spent processing worker messages.",
-			Buckets: prometheus.DefBuckets,
-		},
-	)
+	HttpRequestsTotal        metric.Int64Counter
+	HttpRequestDuration      metric.Float64Histogram
+	WorkerMessagesTotal      metric.Int64Counter
+	WorkerProcessingDuration metric.Float64Histogram
 )
 
-func Register() {
-	prometheus.MustRegister(
-		HttpRequestsTotal,
-		HttpRequestDuration,
-		WorkerMessagesTotal,
-		WorkerProcessingDuration,
+func Register() error {
+	var err error
+
+	HttpRequestsTotal, err = meter.Int64Counter(
+		"categorization.http.requests_total",
+		metric.WithDescription("Total HTTP requests handled, by route, method and status."),
+		metric.WithUnit("1"),
 	)
+
+	if err != nil {
+		return err
+	}
+
+	HttpRequestDuration, err = meter.Float64Histogram(
+		"categorization.http.request.duration",
+		metric.WithDescription("HTTP request latency in seconds."),
+		metric.WithUnit("s"),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	WorkerMessagesTotal, err = meter.Int64Counter(
+		"categorization.worker.messages_processed_total",
+		metric.WithDescription("Total number of processed worker messages."),
+		metric.WithUnit("1"),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	WorkerProcessingDuration, err = meter.Float64Histogram(
+		"categorization.worker.message_processing.duration",
+		metric.WithDescription("Time spent processing worker messages."),
+		metric.WithUnit("s"),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func ObserveWorkerProcessing(start time.Time, err error) {
-	WorkerProcessingDuration.Observe(time.Since(start).Seconds())
-
+func ObserveWorkerProcessing(ctx context.Context, start time.Time, err error) {
 	outcome := "success"
+
 	if err != nil {
 		outcome = "failure"
 	}
 
-	WorkerMessagesTotal.WithLabelValues(outcome).Inc()
+	attrs := metric.WithAttributes(attribute.String("outcome", outcome))
+
+	WorkerProcessingDuration.Record(ctx, time.Since(start).Seconds(), attrs)
+
+	WorkerMessagesTotal.Add(ctx, 1, attrs)
 }

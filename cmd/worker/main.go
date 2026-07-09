@@ -16,22 +16,14 @@ import (
 
 func main() {
 
-	ctx, stop := signal.NotifyContext(
-		context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	defer stop()
 
 	app, err := getApp(ctx)
 
 	if err != nil {
-		slog.Error(
-			"failed to initialize app",
-			"err",
-			err,
-		)
+		slog.Error("failed to initialize app", "err", err)
 
 		os.Exit(1)
 	}
@@ -39,20 +31,12 @@ func main() {
 	w, err := worker.New(app)
 
 	if err != nil {
-		slog.Error(
-			"failed to initialize worker",
-			"err",
-			err,
-		)
+		slog.Error("failed to initialize worker", "err", err)
 
 		os.Exit(1)
 	}
 
-	slog.Info(
-		"worker is running",
-		"queue",
-		app.QueueURL(),
-	)
+	slog.Info("worker is running", "queue", app.QueueURL())
 
 	_, err = awscfg.LoadDefaultConfig(
 		ctx,
@@ -63,11 +47,7 @@ func main() {
 	)
 
 	if err != nil {
-		slog.Error(
-			"failed to load aws config",
-			"err",
-			err,
-		)
+		slog.Error("failed to load aws config", "err", err)
 
 		os.Exit(1)
 	}
@@ -75,11 +55,7 @@ func main() {
 	if err := w.Run(ctx); err != nil &&
 		err != context.Canceled {
 
-		slog.Error(
-			"worker stopped",
-			"err",
-			err,
-		)
+		slog.Error("worker stopped", "err", err)
 
 		os.Exit(1)
 	}
@@ -92,11 +68,7 @@ func main() {
 	defer cancel()
 
 	if err := app.Close(shutdownCtx); err != nil {
-		slog.Error(
-			"application shutdown failed",
-			"err",
-			err,
-		)
+		slog.Error("application shutdown failed", "err", err)
 	}
 
 	slog.Info("worker shut down gracefully")

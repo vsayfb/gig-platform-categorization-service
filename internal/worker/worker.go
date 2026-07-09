@@ -81,7 +81,7 @@ func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error
 	start := time.Now()
 
 	defer func() {
-		metrics.ObserveWorkerProcessing(start, err)
+		metrics.ObserveWorkerProcessing(ctx, start, err)
 	}()
 
 	msg := Message{
