@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -45,12 +46,13 @@ func getApp(ctx context.Context) (*App, error) {
 	once.Do(func() {
 
 		cfg, err := config.Load()
+
 		if err != nil {
 			initErr = fmt.Errorf("load config: %w", err)
 			return
 		}
 
-		lg.Init(cfg.Env)
+		logHandler := lg.Init(cfg.Env)
 
 		metrics.Register()
 
@@ -63,6 +65,13 @@ func getApp(ctx context.Context) (*App, error) {
 			cfg.ServiceName,
 			cfg.OTelCollectorAddr,
 		)
+
+		if err != nil {
+			slog.Error("failed to init tracer", "error", err)
+			os.Exit(1)
+		}
+
+		slog.SetDefault(slog.New(tracing.NewOTelHandler(logHandler)))
 
 		if err != nil {
 			initErr = fmt.Errorf(

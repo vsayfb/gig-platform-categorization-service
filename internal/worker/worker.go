@@ -54,7 +54,7 @@ func (w *Worker) Run(ctx context.Context) error {
 				return ctx.Err()
 			}
 
-			slog.Error("receive failed", "err", err)
+			slog.ErrorContext(ctx, "receive failed", "err", err)
 
 			continue
 		}
@@ -90,6 +90,7 @@ func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error
 	}
 
 	if err = w.processor.Process(ctx, msg); err != nil {
+		slog.ErrorContext(ctx, "failed to process message", "err", err)
 		return err
 	}
 
@@ -97,6 +98,8 @@ func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error
 		QueueUrl:      aws.String(w.processor.QueueURL()),
 		ReceiptHandle: m.ReceiptHandle,
 	})
+
+	slog.WarnContext(ctx, "failed to delete message", "err", err)
 
 	return err
 }

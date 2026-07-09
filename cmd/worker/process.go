@@ -42,26 +42,23 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 		return err
 	}
 
-	slog.Info("processing gig", "gig_id", msg.GigID)
-
 	// categorize text
 	cat, err := a.categoryService.Resolve(ctx, msg.Title, msg.Description)
 	if err != nil {
-		slog.Error("categorize text error", "err", err, "gig_id", msg.GigID)
+		slog.ErrorContext(ctx, "categorize text error", "err", err, "gig_id", msg.GigID)
 		return err
 	}
 
-	// find matching subscribers by category + location
-	subscribers, err := a.subscriberRepo.FindByCategoryAndLocation(ctx, cat.ID, msg.Location.Lat, msg.Location.Lng)
+	slog.InfoContext(ctx, "categorized text", "category", cat)
+
+	// find matching subscribers by category
+	subscribers, err := a.subscriberRepo.FindByCategory(ctx, cat.ID)
+
+	slog.InfoContext(ctx, "found subscribers", "subs", subscribers)
+
 	if err != nil {
 		return err
 	}
-
-	slog.Info(
-		"found subscribers for gig",
-		"count", len(subscribers),
-		"gig_id", msg.GigID,
-	)
 
 	// fanout to notification lambda, bounded concurrency, best-effort
 	g, gCtx := errgroup.WithContext(ctx)
@@ -87,7 +84,7 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 			}
 
 			if err := a.notificationPublisher.Publish(gCtx, n); err != nil {
-				slog.Error("failed to publish notification",
+				slog.ErrorContext(ctx, "failed to publish notification",
 					"err", err,
 					"subscriber_id", s.ID,
 					"gig_id", msg.GigID,
@@ -102,7 +99,7 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 	_ = g.Wait() // every g.Go() returns nil, so this is always nil; kept for goroutine cleanup
 
 	if n := failed.Load(); n > 0 {
-		slog.Warn("some notifications failed to publish",
+		slog.WarnContext(ctx, "some notifications failed to publish",
 			"failed", n,
 			"total", len(subscribers),
 			"gig_id", msg.GigID,

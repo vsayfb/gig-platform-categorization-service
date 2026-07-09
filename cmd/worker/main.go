@@ -8,6 +8,9 @@ import (
 	"syscall"
 	"time"
 
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+
 	"github.com/vsayfb/gig-platform-categorization-service/internal/worker"
 )
 
@@ -50,6 +53,24 @@ func main() {
 		"queue",
 		app.QueueURL(),
 	)
+
+	_, err = awscfg.LoadDefaultConfig(
+		ctx,
+		awscfg.WithRegion("us-east-1"),
+		awscfg.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider("test", "test", ""),
+		),
+	)
+
+	if err != nil {
+		slog.Error(
+			"failed to load aws config",
+			"err",
+			err,
+		)
+
+		os.Exit(1)
+	}
 
 	if err := w.Run(ctx); err != nil &&
 		err != context.Canceled {
