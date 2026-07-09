@@ -99,7 +99,9 @@ func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error
 		ReceiptHandle: m.ReceiptHandle,
 	})
 
-	slog.WarnContext(ctx, "failed to delete message", "err", err)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to delete message", "err", err)
+	}
 
 	return err
 }

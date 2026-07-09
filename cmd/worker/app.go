@@ -14,6 +14,7 @@ import (
 	"github.com/vsayfb/gig-platform-categorization-service/internal/notification"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/subscriber"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/embeddings"
+	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/telemetry"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/tracing"
 
@@ -55,6 +56,11 @@ func getApp(ctx context.Context) (*App, error) {
 
 		if err != nil {
 			initErr = fmt.Errorf("initialize telemetry: %w", err)
+			return
+		}
+
+		if err := metrics.Register(); err != nil {
+			initErr = fmt.Errorf("register metrics: %w", err)
 			return
 		}
 
