@@ -42,7 +42,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	prompt := prompter.BuildProfessionPrompt(title, description)
 
 	payload := map[string]any{
-		"model": s.cfg.AI.MODEL,
+		"model": s.cfg.AI.Model,
 		"messages": []map[string]string{
 			{
 				"role":    "system",

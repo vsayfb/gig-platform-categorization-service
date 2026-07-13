@@ -41,7 +41,7 @@ type SQS struct {
 type AI struct {
 	API_KEY             string
 	API_ENDPOINT        string
-	MODEL               string
+	Model               string
 	HuggingFaceAIModel  string
 	PromptFile          string
 	LocalOllamaEndpoint string
@@ -69,7 +69,7 @@ func Load() (*Config, error) {
 		AI: AI{
 			API_KEY:             required("AI_API_KEY"),
 			API_ENDPOINT:        required("AI_API_ENDPOINT"),
-			MODEL:               required("AI_MODEL"),
+			Model:               required("AI_MODEL"),
 			HuggingFaceAIModel:  getEnv("HUGGINGFACE_AI_MODEL", "all-minilm:l12-v2"),
 			LocalOllamaEndpoint: getEnv("LOCAL_OLLAMA_ENDPOINT", "localhost:11434"),
 			PromptFile:          getEnv("PROMPT_FILE", ""),
