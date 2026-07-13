@@ -6,5 +6,5 @@ import (
 
 type Processor interface {
 	Process(context.Context, Message) error
-	QueueURL() string
+	CategorizationSQSQueue() string
 }

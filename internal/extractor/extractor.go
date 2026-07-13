@@ -42,7 +42,7 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	prompt := prompter.BuildProfessionPrompt(title, description)
 
 	payload := map[string]any{
-		"model": s.cfg.AI_MODEL,
+		"model": s.cfg.AI.MODEL,
 		"messages": []map[string]string{
 			{
 				"role":    "system",
@@ -69,14 +69,14 @@ func (s *GroqExtractor) Extract(ctx context.Context, title, description string) 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		s.cfg.AI_API_ENDPOINT,
+		s.cfg.AI.API_ENDPOINT,
 		bytes.NewReader(body),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+s.cfg.AI_API_KEY)
+	req.Header.Set("Authorization", "Bearer "+s.cfg.AI.API_KEY)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)

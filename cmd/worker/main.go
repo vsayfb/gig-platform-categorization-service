@@ -25,10 +25,10 @@ func main() {
 	}
 
 	opts := []func(*awscfg.LoadOptions) error{
-		awscfg.WithRegion(app.cfg.AWSRegion),
+		awscfg.WithRegion(app.cfg.App.AWSRegion),
 	}
 
-	if app.cfg.AppEnv == "dev" {
+	if app.cfg.App.Env == "dev" {
 		opts = append(opts,
 			awscfg.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider("test", "test", ""),
@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("worker is running", "queue", app.QueueURL())
+	slog.Info("worker is running", "queue", app.CategorizationSQSQueue())
 
 	if err := w.Run(ctx); err != nil && err != context.Canceled {
 		slog.Error("worker stopped", "err", err)

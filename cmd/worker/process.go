@@ -109,6 +109,6 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 	return nil
 }
 
-func (a *App) QueueURL() string {
-	return a.cfg.CategorizationSQS
+func (a *App) CategorizationSQSQueue() string {
+	return a.cfg.SQS.CategorizationSQS
 }

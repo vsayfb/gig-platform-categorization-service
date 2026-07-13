@@ -36,7 +36,7 @@ func New(cfg aws.Config, p Processor) (*Worker, error) {
 func (w *Worker) Run(ctx context.Context) error {
 	for {
 		resp, err := w.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
-			QueueUrl:            aws.String(w.processor.QueueURL()),
+			QueueUrl:            aws.String(w.processor.CategorizationSQSQueue()),
 			MaxNumberOfMessages: 10,
 			WaitTimeSeconds:     20,
 			VisibilityTimeout:   60,
@@ -91,7 +91,7 @@ func (w *Worker) processMessage(ctx context.Context, m types.Message) (err error
 	}
 
 	_, err = w.client.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-		QueueUrl:      aws.String(w.processor.QueueURL()),
+		QueueUrl:      aws.String(w.processor.CategorizationSQSQueue()),
 		ReceiptHandle: m.ReceiptHandle,
 	})
 

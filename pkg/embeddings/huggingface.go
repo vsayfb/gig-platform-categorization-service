@@ -33,9 +33,9 @@ func NewLocalClient(cfg *config.Config) *LocalClient {
 }
 
 func (c *LocalClient) Embed(ctx context.Context, text string) ([]float32, error) {
-	// Ollama requires the model name inside the JSON payload
+
 	reqBody := OllamaEmbeddingRequest{
-		Model:  c.cfg.HuggingFaceAIModel,
+		Model:  c.cfg.AI.HuggingFaceAIModel,
 		Prompt: text,
 	}
 
@@ -44,7 +44,7 @@ func (c *LocalClient) Embed(ctx context.Context, text string) ([]float32, error)
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	url := c.cfg.LocalOllamaEndpoint + "/api/embeddings"
+	url := c.cfg.AI.LocalOllamaEndpoint + "/api/embeddings"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 

@@ -50,9 +50,9 @@ func getApp(ctx context.Context) (*App, error) {
 			return
 		}
 
-		logHandler := lg.Init(cfg.AppEnv)
+		logHandler := lg.Init(cfg.App.Env)
 
-		shutdownTelemetry, err := telemetry.Init(ctx, cfg.ServiceName, cfg.OTelCollectorAddr)
+		shutdownTelemetry, err := telemetry.Init(ctx, cfg.App.ServiceName, cfg.Server.OTelCollectorAddr)
 
 		if err != nil {
 			initErr = fmt.Errorf("initialize telemetry: %w", err)
@@ -66,7 +66,7 @@ func getApp(ctx context.Context) (*App, error) {
 
 		slog.SetDefault(slog.New(tracing.NewOTelHandler(logHandler)))
 
-		poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+		poolCfg, err := pgxpool.ParseConfig(cfg.DB.URL())
 
 		if err != nil {
 			initErr = fmt.Errorf("parse database url: %w", err)
@@ -101,7 +101,7 @@ func getApp(ctx context.Context) (*App, error) {
 
 		publisher, err := notification.NewSQSPublisher(
 			ctx,
-			cfg.NotificationSQS,
+			cfg.SQS.NotificationSQS,
 		)
 
 		if err != nil {
