@@ -66,7 +66,7 @@ func getApp(ctx context.Context) (*App, error) {
 
 		slog.SetDefault(slog.New(tracing.NewOTelHandler(logHandler)))
 
-		poolCfg, err := pgxpool.ParseConfig(cfg.DB.URL())
+		poolCfg, err := pgxpool.ParseConfig(cfg.DB.DSN())
 
 		if err != nil {
 			initErr = fmt.Errorf("parse database url: %w", err)
