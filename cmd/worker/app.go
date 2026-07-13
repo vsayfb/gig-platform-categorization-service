@@ -50,7 +50,7 @@ func getApp(ctx context.Context) (*App, error) {
 			return
 		}
 
-		logHandler := lg.Init(cfg.Env)
+		logHandler := lg.Init(cfg.AppEnv)
 
 		shutdownTelemetry, err := telemetry.Init(ctx, cfg.ServiceName, cfg.OTelCollectorAddr)
 

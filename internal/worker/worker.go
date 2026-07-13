@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
@@ -21,14 +20,11 @@ type Worker struct {
 	processor Processor
 }
 
-func New(p Processor) (*Worker, error) {
-	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
+func New(cfg aws.Config, p Processor) (*Worker, error) {
 	client := sqs.NewFromConfig(cfg, func(o *sqs.Options) {
-		o.BaseEndpoint = aws.String(os.Getenv("AWS_SQS_ENDPOINT"))
+		if endpoint := os.Getenv("AWS_SQS_ENDPOINT"); endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
 	})
 
 	return &Worker{

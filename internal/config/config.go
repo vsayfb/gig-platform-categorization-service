@@ -15,10 +15,11 @@ type Config struct {
 	HuggingFaceAIModel  string
 	PromptFile          string
 	LocalOllamaEndpoint string
-	Env                 string
+	AppEnv              string
 	MetricsServerPort   string
 	ServiceName         string
 	OTelCollectorAddr   string
+	AWSRegion           string
 }
 
 func Load() (*Config, error) {
@@ -31,10 +32,11 @@ func Load() (*Config, error) {
 		AI_MODEL:            required("AI_MODEL"),
 		HuggingFaceAIModel:  required("HUGGINGFACE_AI_MODEL"),
 		LocalOllamaEndpoint: required("LOCAL_OLLAMA_ENDPOINT"),
-		Env:                 required("ENV"),
+		AppEnv:              getEnv("ENV", "production"),
 		MetricsServerPort:   required("METRICS_SERVER_PORT"),
-		OTelCollectorAddr:   required("OTEL_COLLECTOR_ADDR"),
+		OTelCollectorAddr:   getEnv("OTEL_COLLECTOR_ADDR", "localhost:4317"),
 		ServiceName:         required("SERVICE_NAME"),
+		AWSRegion:           required("AWS_REGION"),
 
 		// Optional
 		PromptFile: os.Getenv("PROMPT_FILE"),
@@ -48,6 +50,16 @@ func required(key string) string {
 
 	if value == "" {
 		panic(fmt.Sprintf("missing required environment variable: %s", key))
+	}
+
+	return value
+}
+
+func getEnv(key string, defaultValue string) string {
+	value := os.Getenv(key)
+
+	if value == "" {
+		return defaultValue
 	}
 
 	return value
