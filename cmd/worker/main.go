@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -50,6 +51,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	healthMux := http.NewServeMux()
+
+	healthMux.HandleFunc("/health", func(rw http.ResponseWriter, r *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+	})
+
+	healthSrv := &http.Server{
+		Addr:    ":8082",
+		Handler: healthMux,
+	}
+
+	go func() {
+		slog.Info("health check server listening", "addr", healthSrv.Addr)
+
+		if err := healthSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("health check server failed", "err", err)
+		}
+	}()
+
 	slog.Info("worker is running", "queue", app.CategorizationSQSQueue())
 
 	if err := w.Run(ctx); err != nil && err != context.Canceled {
@@ -63,6 +83,10 @@ func main() {
 	)
 
 	defer cancel()
+
+	if err := healthSrv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("health check server shutdown failed", "err", err)
+	}
 
 	if err := app.Close(shutdownCtx); err != nil {
 		slog.Error("application shutdown failed", "err", err)
