@@ -43,7 +43,7 @@ var (
 func getApp(ctx context.Context) (*App, error) {
 	once.Do(func() {
 
-		cfg, err := config.Load()
+		cfg, err := config.Load(ctx)
 
 		if err != nil {
 			initErr = fmt.Errorf("load config: %w", err)
