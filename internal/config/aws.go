@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -140,7 +141,13 @@ func loadSecret(
 }
 
 func getOrDefault(values map[string]string, key, def string) string {
-	if v, ok := values[key]; ok {
+	envKey := strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
+
+	if v := os.Getenv(envKey); v != "" {
+		return v
+	}
+
+	if v, ok := values[key]; ok && v != "" {
 		return v
 	}
 
