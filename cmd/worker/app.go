@@ -99,9 +99,9 @@ func getApp(ctx context.Context) (*App, error) {
 			cfg,
 		)
 
-		publisher, err := notification.NewSQSPublisher(
+		publisher, err := notification.NewNotificationPublisher(
 			ctx,
-			cfg.AWS.NotificationEventsQueue,
+			cfg,
 		)
 
 		if err != nil {

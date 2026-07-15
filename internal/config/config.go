@@ -32,6 +32,7 @@ type AWSConfig struct {
 	Region                    string
 	AccessKeyID               string
 	SecretAccessKey           string
+	SQSEndpoint               string
 	CategorizationEventsQueue string
 	NotificationEventsQueue   string
 }

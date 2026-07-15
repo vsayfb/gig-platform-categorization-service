@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/awsclient"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/metrics"
 	"github.com/vsayfb/gig-platform-categorization-service/pkg/tracing"
 	"go.opentelemetry.io/otel"
@@ -20,15 +22,19 @@ type Worker struct {
 	processor Processor
 }
 
-func New(cfg aws.Config, p Processor) (*Worker, error) {
-	client := sqs.NewFromConfig(cfg, func(o *sqs.Options) {
-		if endpoint := os.Getenv("AWS_SQS_ENDPOINT"); endpoint != "" {
-			o.BaseEndpoint = aws.String(endpoint)
-		}
-	})
+func New(ctx context.Context, cfg *config.Config, p Processor) (*Worker, error) {
+
+	awsCfg, err := awsclient.New(ctx, cfg)
+
+	if err != nil {
+		slog.Error("failed to initialize aws client", "err", err)
+		os.Exit(1)
+	}
+
+	sqs := awsclient.NewSQS(awsCfg, cfg)
 
 	return &Worker{
-		client:    client,
+		client:    sqs,
 		processor: p,
 	}, nil
 }

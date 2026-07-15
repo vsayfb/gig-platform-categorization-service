@@ -22,6 +22,7 @@ func loadEnv() (*Config, error) {
 			SecretAccessKey:           required(EnvAWSSecretAccessKey),
 			CategorizationEventsQueue: required(EnvCategorizationSQSUrl),
 			NotificationEventsQueue:   required(EnvNotificationSQSUrl),
+			SQSEndpoint:               required(EnvAWSSQSEndpont),
 		},
 
 		Server: ServerConfig{

@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/awsclient"
+	"github.com/vsayfb/gig-platform-categorization-service/internal/config"
 )
 
 type SQSPublisher struct {
@@ -14,15 +15,19 @@ type SQSPublisher struct {
 	client   *sqs.Client
 }
 
-func NewSQSPublisher(ctx context.Context, queueURL string) (*SQSPublisher, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
+func NewNotificationPublisher(ctx context.Context, cfg *config.Config) (*SQSPublisher, error) {
+
+	awsCfg, err := awsclient.New(ctx, cfg)
+
 	if err != nil {
-		return nil, fmt.Errorf("load aws config: %w", err)
+		return nil, fmt.Errorf("initialize aws client: %w", err)
 	}
 
+	sqs := awsclient.NewSQS(awsCfg, cfg)
+
 	return &SQSPublisher{
-		queueURL: queueURL,
-		client:   sqs.NewFromConfig(cfg),
+		queueURL: cfg.AWS.NotificationEventsQueue,
+		client:   sqs,
 	}, nil
 }
 

@@ -9,8 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	awscfg "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/vsayfb/gig-platform-categorization-service/internal/worker"
 )
 
@@ -25,26 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	opts := []func(*awscfg.LoadOptions) error{
-		awscfg.WithRegion(app.cfg.AWS.Region),
-	}
-
-	if app.cfg.App.Env != "production" {
-		opts = append(opts,
-			awscfg.WithCredentialsProvider(
-				credentials.NewStaticCredentialsProvider("test", "test", ""),
-			),
-		)
-	}
-
-	awsCfg, err := awscfg.LoadDefaultConfig(ctx, opts...)
-
-	if err != nil {
-		slog.Error("failed to load aws config", "err", err)
-		os.Exit(1)
-	}
-
-	w, err := worker.New(awsCfg, app)
+	w, err := worker.New(ctx, app.cfg, app)
 
 	if err != nil {
 		slog.Error("failed to initialize worker", "err", err)
