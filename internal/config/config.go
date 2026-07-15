@@ -9,15 +9,14 @@ import (
 type Config struct {
 	App    APP
 	DB     DBConfig
+	AWS    AWSConfig
 	Server ServerConfig
-	SQS    SQS
 	AI     AI
 }
 
 type APP struct {
 	ServiceName string
 	Env         string
-	AWSRegion   string
 }
 
 type DBConfig struct {
@@ -29,14 +28,17 @@ type DBConfig struct {
 	SSLMode  string
 }
 
+type AWSConfig struct {
+	Region                    string
+	AccessKeyID               string
+	SecretAccessKey           string
+	CategorizationEventsQueue string
+	NotificationEventsQueue   string
+}
+
 type ServerConfig struct {
 	MetricsServerPort string
 	OTelCollectorAddr string
-}
-
-type SQS struct {
-	CategorizationSQS string
-	NotificationSQS   string
 }
 
 type AI struct {
@@ -49,7 +51,10 @@ type AI struct {
 }
 
 func Load(ctx context.Context) (*Config, error) {
-	if getEnv("APP_ENV", "development") == "production" {
+
+	env := os.Getenv(EnvApp)
+
+	if env == EnvironmentProduction {
 		return loadAWS(ctx)
 	}
 

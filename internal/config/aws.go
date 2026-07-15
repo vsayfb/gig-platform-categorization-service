@@ -4,13 +4,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awscfg "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+)
+
+const SSMParameterPath = "/gig/app"
+
+const (
+	ParameterDBHost       = "db-host"
+	ParameterDBPort       = "db-port"
+	ParameterDBName       = "db-name"
+	ParameterRDSSecretArn = "rds-secret-arn"
+
+	ParameterSQSCategoryEventsQueueURL     = "sqs-category-events-queue-url"
+	ParameterSQSNotificationEventsQueueURL = "sqs-notification-events-queue-url"
+
+	ParameterGroqAPIKeySecretArn = "groq-api-key-secret-arn"
+	ParameterGroqEndpoint        = "groq-ai-endpoint"
+	ParameterGroqModel           = "groq-ai-model"
 )
 
 type rdsSecret struct {
@@ -22,14 +37,18 @@ type groqSecret struct {
 	APIKey string `json:"api_key"`
 }
 
-const parameterPath = "/gerek/app"
-
 func loadAWS(ctx context.Context) (*Config, error) {
 
 	awsCfg, err := awscfg.LoadDefaultConfig(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("load aws config: %w", err)
+	}
+
+	awsCreds, err := awsCfg.Credentials.Retrieve(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("load aws creds: %w", err)
 	}
 
 	ssmClient := ssm.NewFromConfig(awsCfg)
@@ -43,64 +62,66 @@ func loadAWS(ctx context.Context) (*Config, error) {
 
 	var db rdsSecret
 
-	if err := loadSecret(ctx, secretsClient, params["rds-secret-arn"], &db); err != nil {
+	if err := loadSecret(ctx, secretsClient, params[ParameterRDSSecretArn], &db); err != nil {
 		return nil, err
 	}
 
 	var groq groqSecret
 
-	if err := loadSecret(ctx, secretsClient, params["groq-api-key-secret-arn"], &groq); err != nil {
+	if err := loadSecret(ctx, secretsClient, params[ParameterGroqAPIKeySecretArn], &groq); err != nil {
 		return nil, err
 	}
 
 	return &Config{
 		App: APP{
-			ServiceName: getOrDefault(params, "service-name", "categorization-worker"),
-			Env:         "production",
-			AWSRegion:   awsCfg.Region,
+			ServiceName: getEnv(EnvServiceName, DefaultServiceName),
+			Env:         EnvironmentProduction,
 		},
 
 		DB: DBConfig{
-			Host:     params["db-host"],
-			Port:     params["db-port"],
-			Name:     params["db-name"],
+			Host:     params[ParameterDBHost],
+			Port:     params[ParameterDBPort],
+			Name:     params[ParameterDBName],
 			User:     db.Username,
 			Password: db.Password,
-			SSLMode:  getOrDefault(params, "db-sslmode", "require"),
+			SSLMode:  "require",
 		},
 
 		Server: ServerConfig{
-			MetricsServerPort: getOrDefault(params, "metrics-server-port", ":9100"),
-			OTelCollectorAddr: getOrDefault(params, "otel-collector-addr", "localhost:4317"),
+			MetricsServerPort: getEnv(EnvMetricsServerPort, DefaultMetricsServerPort),
+			OTelCollectorAddr: getEnv(EnvOtelCollectorAddr, DefaultOtelCollectorAddr),
 		},
 
-		SQS: SQS{
-			CategorizationSQS: params["sqs-category-events-queue-url"],
-			NotificationSQS:   getOrDefault(params, "sqs-notification-events-queue-url", ""),
+		AWS: AWSConfig{
+			Region:                    awsCfg.Region,
+			AccessKeyID:               awsCreds.AccessKeyID,
+			SecretAccessKey:           awsCreds.SecretAccessKey,
+			CategorizationEventsQueue: params[ParameterSQSCategoryEventsQueueURL],
+			NotificationEventsQueue:   params[ParameterSQSNotificationEventsQueueURL],
 		},
 
 		AI: AI{
 			API_KEY:             groq.APIKey,
-			API_ENDPOINT:        params["groq-ai-endpoint"],
-			Model:               params["groq-ai-model"],
-			HuggingFaceAIModel:  getOrDefault(params, "huggingface-ai-model", "all-minilm:l12-v2"),
-			LocalOllamaEndpoint: getOrDefault(params, "local-ollama-endpoint", "localhost:11434"),
-			PromptFile:          getOrDefault(params, "prompt-file", "./internal/prompter/prompts/profession.txt"),
+			API_ENDPOINT:        params[ParameterGroqEndpoint],
+			Model:               params[ParameterGroqModel],
+			HuggingFaceAIModel:  getEnv(EnvHuggingFaceAIModel, DefaultHuggingFaceAIModel),
+			LocalOllamaEndpoint: getEnv(EnvLocalOllamaEndpoint, DefaultLocalOllamaEndpoint),
+			PromptFile:          getEnv(EnvPromptFilePath, DefaultPromptFilePath),
 		},
 	}, nil
 }
 
 func loadParameters(ctx context.Context, client *ssm.Client) (map[string]string, error) {
 	names := []string{
-		parameter("groq-api-key-secret-arn"),
-		parameter("rds-secret-arn"),
-		parameter("db-host"),
-		parameter("db-port"),
-		parameter("db-name"),
-		parameter("sqs-category-events-queue-url"),
-		parameter("sqs-notification-events-queue-url"),
-		parameter("groq-ai-endpoint"),
-		parameter("groq-ai-model"),
+		ssmParameter(ParameterDBHost),
+		ssmParameter(ParameterDBPort),
+		ssmParameter(ParameterDBName),
+		ssmParameter(ParameterRDSSecretArn),
+		ssmParameter(ParameterSQSCategoryEventsQueueURL),
+		ssmParameter(ParameterSQSNotificationEventsQueueURL),
+		ssmParameter(ParameterGroqAPIKeySecretArn),
+		ssmParameter(ParameterGroqEndpoint),
+		ssmParameter(ParameterGroqModel),
 	}
 
 	out, err := client.GetParameters(ctx, &ssm.GetParametersInput{
@@ -115,7 +136,7 @@ func loadParameters(ctx context.Context, client *ssm.Client) (map[string]string,
 	params := make(map[string]string)
 
 	for _, p := range out.Parameters {
-		key := strings.TrimPrefix(aws.ToString(p.Name), parameterPath+"/")
+		key := strings.TrimPrefix(aws.ToString(p.Name), SSMParameterPath+"/")
 		params[key] = aws.ToString(p.Value)
 	}
 
@@ -140,20 +161,6 @@ func loadSecret(
 	return json.Unmarshal([]byte(aws.ToString(out.SecretString)), dst)
 }
 
-func getOrDefault(values map[string]string, key, def string) string {
-	envKey := strings.ToUpper(strings.ReplaceAll(key, "-", "_"))
-
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-
-	if v, ok := values[key]; ok && v != "" {
-		return v
-	}
-
-	return def
-}
-
-func parameter(name string) string {
-	return parameterPath + "/" + name
+func ssmParameter(name string) string {
+	return SSMParameterPath + "/" + name
 }

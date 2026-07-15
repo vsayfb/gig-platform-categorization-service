@@ -110,5 +110,5 @@ func (a *App) Process(ctx context.Context, record worker.Message) error {
 }
 
 func (a *App) CategorizationSQSQueue() string {
-	return a.cfg.SQS.CategorizationSQS
+	return a.cfg.AWS.CategorizationEventsQueue
 }

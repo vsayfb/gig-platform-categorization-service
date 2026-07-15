@@ -26,10 +26,10 @@ func main() {
 	}
 
 	opts := []func(*awscfg.LoadOptions) error{
-		awscfg.WithRegion(app.cfg.App.AWSRegion),
+		awscfg.WithRegion(app.cfg.AWS.Region),
 	}
 
-	if app.cfg.App.Env == "dev" {
+	if app.cfg.App.Env != "production" {
 		opts = append(opts,
 			awscfg.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider("test", "test", ""),

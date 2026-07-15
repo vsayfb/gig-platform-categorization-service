@@ -3,37 +3,39 @@ package config
 func loadEnv() (*Config, error) {
 	return &Config{
 		App: APP{
-			ServiceName: getEnv("SERVICE_NAME", "categorization-worker"),
-			Env:         getEnv("ENV", "development"),
-			AWSRegion:   getEnv("AWS_REGION", "eu-central-1"),
+			ServiceName: getEnv(EnvServiceName, DefaultServiceName),
+			Env:         EnvironmentDevelopment,
 		},
 
 		DB: DBConfig{
-			Host:     required("DB_HOST"),
-			Port:     required("DB_PORT"),
-			User:     required("DB_USER"),
-			Password: required("DB_PASSWORD"),
-			Name:     required("DB_NAME"),
-			SSLMode:  getEnv("DB_SSLMODE", "require"),
+			Host:     required(EnvDBHost),
+			Port:     required(EnvDBPort),
+			User:     required(EnvDBUser),
+			Password: required(EnvDBPassword),
+			Name:     required(EnvDBName),
+			SSLMode:  DefaultDBSSLMode,
+		},
+
+		AWS: AWSConfig{
+			Region:                    required(EnvAWSRegion),
+			AccessKeyID:               required(EnvAWSAccessKeyID),
+			SecretAccessKey:           required(EnvAWSSecretAccessKey),
+			CategorizationEventsQueue: required(EnvCategorizationSQSUrl),
+			NotificationEventsQueue:   required(EnvNotificationSQSUrl),
 		},
 
 		Server: ServerConfig{
-			MetricsServerPort: getEnv("METRICS_SERVER_PORT", ":9100"),
-			OTelCollectorAddr: getEnv("OTEL_COLLECTOR_ADDR", "localhost:4317"),
-		},
-
-		SQS: SQS{
-			CategorizationSQS: required("CATEGORIZATION_SQS_URL"),
-			NotificationSQS:   required("NOTIFICATION_SQS_URL"),
+			MetricsServerPort: getEnv(EnvMetricsServerPort, DefaultMetricsServerPort),
+			OTelCollectorAddr: getEnv(EnvLocalOllamaEndpoint, DefaultLocalOllamaEndpoint),
 		},
 
 		AI: AI{
-			API_KEY:             required("AI_API_KEY"),
-			API_ENDPOINT:        required("AI_API_ENDPOINT"),
-			Model:               required("AI_MODEL"),
-			HuggingFaceAIModel:  getEnv("HUGGINGFACE_AI_MODEL", "all-minilm:l12-v2"),
-			LocalOllamaEndpoint: getEnv("LOCAL_OLLAMA_ENDPOINT", "localhost:11434"),
-			PromptFile:          getEnv("PROMPT_FILE", "./internal/prompter/prompts/profession.txt"),
+			API_KEY:             required(EnvAIKey),
+			API_ENDPOINT:        required(EnvAIEndpoint),
+			Model:               required(EnvAIModel),
+			HuggingFaceAIModel:  getEnv(EnvHuggingFaceAIModel, DefaultHuggingFaceAIModel),
+			LocalOllamaEndpoint: getEnv(EnvLocalOllamaEndpoint, DefaultLocalOllamaEndpoint),
+			PromptFile:          getEnv(EnvPromptFilePath, DefaultPromptFilePath),
 		},
 	}, nil
 }
