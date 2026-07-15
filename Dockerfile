@@ -20,4 +20,6 @@ WORKDIR /app
 
 COPY --from=builder /app/bin/cat-worker .
 
+EXPOSE 8082
+
 CMD ["./cat-worker"]
